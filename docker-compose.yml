@@ -1,0 +1,72 @@
+version: '3'
+
+services:
+  fastapi-postgresql:
+    container_name: fastapi-postgresql
+    restart: always
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile.postgresql
+    image: fastapi/postgresql:1.0.0.1
+    privileged: true
+    command: postgres -c config_file=/etc/postgresql.conf
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: webapi
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - /etc/localtime:/etc/localtime
+      - ./data/pg/pgdata:/var/lib/postgresql/data/pgdata
+      - ./data/pg/pg_archive:/var/lib/postgresql/data/pg_archive
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+
+  fastapi-redis:
+    container_name: fastapi-redis
+    restart: always
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile.redis
+    image: fastapi/redis:1.0.0.1
+    privileged: true
+    sysctls:
+      - net.core.somaxconn=65500
+    command: redis-server --requirepass password
+    volumes:
+      - /etc/localtime:/etc/localtime
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+
+  fastapi-webapi:
+    container_name: fastapi-webapi
+    restart: always
+    image: fastapi/webapi:1.0.0.1
+    privileged: true
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile.webapi
+    ports:
+      - 8000:8000
+    environment:
+      - WEBAPI_ENTRY_TYPE=webapi
+      - REDIS_PORT=6379
+      - POSTGRESQL_PORT=5432
+      - REDIS_PASSWORD=password
+      - POSTGRESQL_PASSWORD=password
+    depends_on:
+      - fastapi-postgresql
+      - fastapi-redis
+    volumes:
+      # - /var/run/docker.sock:/var/run/docker.sock
+      - /etc/localtime:/etc/localtime
+      - ./src/web:/app/web
+      - ./runtimedir:/app/runtimedir
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"

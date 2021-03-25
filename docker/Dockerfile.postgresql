@@ -1,0 +1,2 @@
+FROM docker.io/postgres:10.15
+COPY ./conf/postgresql.conf /etc/postgresql.conf

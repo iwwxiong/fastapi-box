@@ -1,0 +1,12 @@
+#!/bin/bash
+
+set -e
+
+if [ "${WEBAPI_ENTRY_TYPE}" == "webapi" ]; then
+    set -- uvicorn wsgi:app --host 0.0.0.0 --port 8000 "$@"
+else
+    exec "$@"
+fi
+
+exec "$@"
+

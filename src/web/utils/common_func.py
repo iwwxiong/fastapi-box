@@ -1,4 +1,7 @@
 import hashlib
+import logging
+
+logger = logging.getLogger("utils")
 
 
 def compute_md5(content: str, salt: str = None) -> str:

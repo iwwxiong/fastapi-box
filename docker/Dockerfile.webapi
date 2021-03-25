@@ -1,0 +1,7 @@
+FROM docker.io/python:3.7.10
+WORKDIR /app/web
+COPY ./docker/docker-entrypoint.sh.webapi /usr/bin/docker-entrypoint.sh
+RUN chmod +x /usr/bin/docker-entrypoint.sh
+COPY ./src/web/ .
+RUN pip install -r requirements.txt -i https://pypi.doubanio.com/simple/ --trusted-host pypi.doubanio.com
+ENTRYPOINT ["docker-entrypoint.sh"]

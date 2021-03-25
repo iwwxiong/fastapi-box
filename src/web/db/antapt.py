@@ -13,7 +13,6 @@ AntaptBase = declarative_base(name='AntaptBase')
 
 class ModelBase(AntaptBase):
     __abstract__ = True
-    __table_args__ = {'mysql_charset': 'utf8', 'mysql_engine': 'InnoDB'}
 
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
     create_time = Column(DateTime, server_default=text('NOW()'), default=datetime.datetime.now)

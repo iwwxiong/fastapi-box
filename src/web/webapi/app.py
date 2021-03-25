@@ -1,6 +1,6 @@
-import time
 import aioredis
-from fastapi import FastAPI, Request
+import logging
+from fastapi import FastAPI
 from fastapi.routing import APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.encoders import jsonable_encoder
@@ -10,11 +10,11 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from settings import settings
 from db.antapt import AntaptDatabase
 from models.antapt import Users   # noqa
-from utils.log_utils import LoggerHelper
-from webapi.core.middlewares import RedisSessionMiddleware
+from webapi.core.middleware.session import RedisSessionMiddleware
+from webapi.core.middleware.response_time import ResponseTimeMiddleware
 from webapi.core.base import BaseRoute, BaseResponse
 
-logger = LoggerHelper("webapi").get_logger()
+logger = logging.getLogger("webapi")
 
 
 def register_redis(app: FastAPI) -> None:
@@ -43,16 +43,34 @@ def register_db(app: FastAPI, antapt_db: AntaptDatabase) -> None:
         app.state.dbsession.close()
 
 
+def create_tables(antapt_db: AntaptDatabase) -> None:
+    antapt_db.create_tables()
+    from webapi.auth.main import create_user  # noqa
+    ok, user = create_user(
+        dbsession=antapt_db.session,
+        username="admin",
+        password="admin",
+        role="admin"
+    )
+    if not ok and user is None:
+        raise Exception("初始化数据库失败")
+
+
 def create_app(init_tables: bool = False) -> FastAPI:
     app = FastAPI(
-        default_response_class=BaseResponse
+        debug=settings.debug,
+        title="FastAPI 开箱即用",
+        default_response_class=BaseResponse,
+        # 生产模式需要关闭文档
+        # openapi_url=None,
+        # docs_url=None,
+        # redoc_url=None
     )
     app.router.route_class = BaseRoute
 
     antapt_db = AntaptDatabase()
     if init_tables:
-        antapt_db.create_tables()
-        logger.info("Init tables")
+        create_tables(antapt_db)
 
     register_redis(app)
     register_db(app, antapt_db)
@@ -68,8 +86,15 @@ def create_app(init_tables: bool = False) -> FastAPI:
 
     app.include_router(api_v1_router)
 
-    app.add_middleware(RedisSessionMiddleware, secret_key=settings.secret_key, expire=10 * 60, https_only=True)
-
+    """
+    中间件执行顺序
+    A, B, C
+    请求是 C -> B -> A
+    响应是 A -> B -> C
+    """
+    app.add_middleware(ResponseTimeMiddleware)
+    app.add_middleware(RedisSessionMiddleware, secret_key=settings.secret_key, expire=60 * 60 * 24)
+    
     # cors 跨域
     app.add_middleware(
         CORSMiddleware,
@@ -79,15 +104,7 @@ def create_app(init_tables: bool = False) -> FastAPI:
         allow_headers=["*"],
     )
 
-    @app.middleware("http")
-    async def add_response_time(request: Request, call_next):
-        start_time = time.time()
-        response = await call_next(request)
-        response_time = time.time() - start_time
-        response.headers["X-Response-Time"] = str(response_time)
-        return response
-
-    # 复写 HttpException，RequestValidationError，标准输出
+    # 覆写 HttpException，RequestValidationError，标准输出
     @app.exception_handler(StarletteHTTPException)
     async def http_exception_handler(request, exc):
         return BaseResponse(status_code=exc.status_code, message=str(exc.detail))
