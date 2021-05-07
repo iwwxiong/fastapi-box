@@ -1,9 +1,17 @@
 import typing
 from pydantic import ValidationError
+from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import Request, HTTPException, Depends
 from starlette.status import HTTP_401_UNAUTHORIZED, HTTP_403_FORBIDDEN
 
 from .schema import UserSchema
+
+
+async def get_async_dbsession(request: Request) -> AsyncSession:
+    async_db = request.app.state.async_db
+    async_session = async_db.make_session()
+    async with async_session() as session:
+        yield session
 
 
 async def login_required(request: Request) -> UserSchema:

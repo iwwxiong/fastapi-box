@@ -93,8 +93,7 @@ class BaseResponse(JSONResponse):
     def __init__(self, status_code: int = 200, message: str = "OK", content: Any = [], **kwargs) -> None:
         self.message = message
         self.status = status_code
-        # 所有的 HTTP status_code 重置为 200，通过响应内容的 status_code 区分异常
-        super().__init__(status_code=200, content=content, **kwargs)
+        super().__init__(status_code=self.status, content=content, **kwargs)
 
     def render(self, content: typing.Any) -> bytes:
         data = {

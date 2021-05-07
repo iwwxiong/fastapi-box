@@ -3,7 +3,7 @@
 set -e
 
 if [ "${WEBAPI_ENTRY_TYPE}" == "webapi" ]; then
-    set -- uvicorn wsgi:app --host 0.0.0.0 --port 8000 "$@"
+    set -- uvicorn asgi:app --host 0.0.0.0 --port 8000 --reload "$@"
 else
     exec "$@"
 fi

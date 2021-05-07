@@ -20,10 +20,9 @@ git clone git@github.com:iwwxiong/fastapi-box.git
 cd fastapi-box/src/web
 
 # vim settings.py
-# 修改 postgresql、redis 链接信息
-# 然后
+# 修改 postgresql、redis 连接信息，然后
 
-python wsgi.py
+python asgi.py
 ```
 
 之后也可以访问 http://127.0.0.1:8000/docs 查看 API 文档。

@@ -1,5 +1,8 @@
 from sqlalchemy.ext.mutable import Mutable
+from sqlalchemy.orm import DeclarativeMeta
 from sqlalchemy import create_engine, event, cast
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import scoped_session
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.dialects.postgresql import ARRAY
@@ -25,14 +28,15 @@ def register_db_event(db):
 
 class Database(metaclass=Singleton):
 
-    def __init__(self, base, uri: str, pool_size: int = 10, pool_recycle: int = 3600) -> None:
+    def __init__(self, base: DeclarativeMeta, uri: str, pool_size: int = 10, pool_recycle: int = 3600) -> None:
         self.base = base
         self._engine = create_engine(
             uri,
             echo=False,
             encoding="utf-8",
             pool_size=pool_size,
-            pool_recycle=pool_recycle)
+            pool_recycle=pool_recycle
+        )
         self.session = self.make_session()
         register_db_event(self)
 
@@ -46,6 +50,36 @@ class Database(metaclass=Singleton):
 
     def close(self):
         self.session.close()
+
+
+class AsyncDatabase(metaclass=Singleton):
+
+    def __init__(self, base: DeclarativeMeta, uri: str, pool_size: int = 10, pool_recycle: int = 3600):
+        self.base = base
+        self._engine = create_async_engine(
+            uri,
+            echo=False,
+            encoding="utf-8",
+            pool_size=pool_size,
+            pool_recycle=pool_recycle
+        )
+
+    def make_session(self):
+        async_session = sessionmaker(
+            bind=self._engine,
+            autocommit=False,
+            autoflush=False,
+            expire_on_commit=False,
+            class_=AsyncSession
+        )
+        return async_session
+
+    async def create_tables(self) -> None:
+        async with self._engine.begin() as conn:
+            await conn.run_sync(self.base.metadata.create_all)
+
+    async def close(self) -> None:
+        await self._engine.dispose()
 
 
 class JSONArray(ARRAY):

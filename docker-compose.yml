@@ -13,7 +13,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: webapi
+      POSTGRES_DB: fastapi
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - /etc/localtime:/etc/localtime

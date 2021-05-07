@@ -8,8 +8,8 @@ from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from settings import settings
-from db.antapt import AntaptDatabase
-from models.antapt import Users   # noqa
+from db.fastapi import FastapiAsyncDatabase
+from models.fastapi import Users   # noqa
 from webapi.core.middleware.session import RedisSessionMiddleware
 from webapi.core.middleware.response_time import ResponseTimeMiddleware
 from webapi.core.base import BaseRoute, BaseResponse
@@ -17,43 +17,49 @@ from webapi.core.base import BaseRoute, BaseResponse
 logger = logging.getLogger("webapi")
 
 
-def register_redis(app: FastAPI) -> None:
+async def init_database(async_db: FastapiAsyncDatabase) -> None:
+    from webapi.auth.main import create_user  # noqa
+
+    await async_db.create_tables()
+    async_session = async_db.make_session()
+    async with async_session() as session:
+        ok, user = await session.run_sync(
+            create_user,
+            username="admin",
+            password="admin",
+            role="admin"
+        )
+        if not ok and user is None:
+            raise Exception("初始化数据库失败")
+
+
+def register_async_redis(app: FastAPI) -> None:
     """
     request.app.state.redis
     """
 
     @app.on_event("startup")
     async def startup_event():
-        app.state.redis = await aioredis.create_redis_pool(settings.webapi_redis_uri)
+        app.state.async_redis = await aioredis.create_redis_pool(settings.fastapi_redis_uri)
 
     @app.on_event("shutdown")
     async def shutdown_event():
-        app.state.redis.close()
-        await app.state.redis.wait_closed()
+        app.state.async_redis.close()
+        await app.state.async_redis.wait_closed()
 
 
-def register_db(app: FastAPI, antapt_db: AntaptDatabase) -> None:
+def register_async_db(app: FastAPI, init_tables: bool = False) -> None:
+
+    async_db = FastapiAsyncDatabase()
 
     @app.on_event("startup")
     async def startup_event():
-        app.state.dbsession = antapt_db.make_session()
+        await init_database(async_db)
+        app.state.async_db = async_db
 
     @app.on_event("shutdown")
     async def shutdown_event():
-        app.state.dbsession.close()
-
-
-def create_tables(antapt_db: AntaptDatabase) -> None:
-    antapt_db.create_tables()
-    from webapi.auth.main import create_user  # noqa
-    ok, user = create_user(
-        dbsession=antapt_db.session,
-        username="admin",
-        password="admin",
-        role="admin"
-    )
-    if not ok and user is None:
-        raise Exception("初始化数据库失败")
+        await app.state.async_db.close()
 
 
 def create_app(init_tables: bool = False) -> FastAPI:
@@ -68,12 +74,8 @@ def create_app(init_tables: bool = False) -> FastAPI:
     )
     app.router.route_class = BaseRoute
 
-    antapt_db = AntaptDatabase()
-    if init_tables:
-        create_tables(antapt_db)
-
-    register_redis(app)
-    register_db(app, antapt_db)
+    register_async_redis(app)
+    register_async_db(app, init_tables=init_tables)
 
     api_v1_router = APIRouter(prefix="/api/v1")
 

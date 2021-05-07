@@ -8,19 +8,19 @@ class AppSettings(BaseSettings):
     time_zone: str = "Asia/Shanghai"
     logger_level: str = "INFO"
     logger_formatter: str = "%(asctime)s [%(name)s] %(funcName)s[line:%(lineno)d] %(levelname)-7s: %(message)s"
-    secret_key: str = "123456789"
+    secret_key: str = "1@3$5^7*9)"
 
 
 class DatabaseSettings(BaseSettings):
     _db_port = os.getenv("POSTGRESQL_PORT") or "5432"
     _db_password = os.getenv("REDIS_PASSWORD") or "password"
-    antapt_uri: str = f"postgresql://postgres:{_db_password}@fastapi-postgresql:{_db_port}/webapi"
+    fastapi_uri: str = f"postgresql+asyncpg://postgres:{_db_password}@fastapi-postgresql:{_db_port}/fastapi"
 
 
 class RedisSettings(BaseSettings):
     _redis_port = os.getenv("REDIS_PORT") or "6379"
     _redis_password = os.getenv("REDIS_PASSWORD") or "password"
-    webapi_redis_uri: str = f"redis://:{_redis_password}@fastapi-redis:{_redis_port}/0?encoding=utf-8"
+    fastapi_redis_uri: str = f"redis://:{_redis_password}@fastapi-redis:{_redis_port}/0?encoding=utf-8"
 
 
 class DataFileSettings(BaseSettings):

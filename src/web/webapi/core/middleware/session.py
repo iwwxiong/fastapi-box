@@ -18,7 +18,7 @@ class RedisSessionMiddleware(SessionMiddleware):
             return
 
         connection = HTTPConnection(scope)
-        redis = connection.app.state.redis
+        async_redis = connection.app.state.async_redis
 
         if self.session_cookie in connection.cookies:
             sid = connection.cookies[self.session_cookie]
@@ -27,21 +27,22 @@ class RedisSessionMiddleware(SessionMiddleware):
             initial_session_was_empty = True
             sid = SessionStorage.generate_sid()
 
-        session = SessionStorage(sid, redis, self.expire)
-        if await session.exists():
-            method = connection.scope["method"].upper()
-            if method == "GET":
-                # 如果 GET 访问，重置 session 过期
-                await session.expire_reset()
-            elif method in ["POST", "PUT", "DELETE"]:
-                # 重置 sessionid
-                await session.reset_sid()
-            
+        session = SessionStorage(sid, async_redis, self.expire)
         scope["session"] = session
 
         async def send_wrapper(message: Message) -> None:
             if message["type"] == "http.response.start":
                 if scope["session"]:
+                    
+                    if await scope["session"].exists():
+                        method = connection.scope["method"].upper()
+                        if method == "GET":
+                            # 如果 GET 访问，重置 session 过期
+                            await scope["session"].expire_reset()
+                        elif method in ["POST", "PUT", "DELETE"]:
+                            # 重置 sessionid
+                            await scope["session"].reset_sid()
+
                     # We have session data to persist.
                     headers = MutableHeaders(scope=message)
                     header_value = "%s=%s; path=/; Max-Age=%d; %s" % (

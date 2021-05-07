@@ -4,7 +4,7 @@ import typing
 from sqlalchemy import Column
 from sqlalchemy import String, Integer
 
-from db.antapt import ModelBase
+from db.fastapi import ModelBase
 
 
 class Users(ModelBase):

@@ -2,16 +2,17 @@ import datetime
 
 from sqlalchemy import Column, text
 from sqlalchemy import Integer, DateTime
+from sqlalchemy.orm import DeclarativeMeta
 from sqlalchemy.ext.declarative import declarative_base
 
 from settings import settings
-from .base import Database
+from .base import AsyncDatabase
 
 
-AntaptBase = declarative_base(name='AntaptBase')
+FastapiBase: DeclarativeMeta = declarative_base(name='FastapiBase')
 
 
-class ModelBase(AntaptBase):
+class ModelBase(FastapiBase):
     __abstract__ = True
 
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
@@ -34,12 +35,12 @@ class ModelBase(AntaptBase):
         return [column.name for column in cls.__table__.columns]
 
 
-class AntaptDatabase(Database):
+class FastapiAsyncDatabase(AsyncDatabase):
 
     def __init__(self, pool_size: int = 10, pool_recycle: int = 3600):
         super().__init__(
-            base=AntaptBase,
-            uri=settings.antapt_uri,
+            base=FastapiBase,
+            uri=settings.fastapi_uri,
             pool_size=pool_size,
             pool_recycle=pool_recycle
         )
