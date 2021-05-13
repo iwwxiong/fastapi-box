@@ -140,3 +140,4 @@ dmypy.json
 /src/sample_record/pg.log
 .editorconfig
 .scannerwork
+src/web/settings_dev.py
