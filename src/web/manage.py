@@ -1,5 +1,3 @@
-# -*-coding: utf-8 -*-
-
 import sys
 import logging
 import importlib
@@ -9,7 +7,7 @@ from settings import settings
 USAGE = (
     "manage.py COMMAND\n"
     "\n"
-    "manage for tapparser"
+    "manage for fastapi-box"
     "\n"
     "\n"
     "Commands: \n"

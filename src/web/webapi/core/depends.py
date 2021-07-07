@@ -15,7 +15,7 @@ async def get_async_dbsession(request: Request) -> AsyncSession:
 
 
 async def login_required(request: Request) -> UserSchema:
-    exception = HTTPException(HTTP_401_UNAUTHORIZED, detail='长时间未操作，请重新登录')
+    exception = HTTPException(HTTP_401_UNAUTHORIZED, detail='未登录')
     if not request.session:
         raise exception
 
